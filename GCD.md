@@ -1,3 +1,5 @@
+> 本文摘自[iOS与OS X多线程和内存管理](https://github.com/aozhimin/awesome-iOS-resource/blob/master/Books/Objective-C%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B%20iOS%E4%B8%8EOS%20X%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%92%8C%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.pdf)  
+
 # GCD
 ## 手动生成Dispatch Queue
 ### Serial Dispatch Queue （等待现在执行中处理）
@@ -103,35 +105,35 @@ if (result) {
 
 ```objc
 dispatch_queue_t barrierQueue = dispatch_queue_create("com.objcTest.gcd.forBarrier", DISPATCH_QUEUE_CONCURRENT);
-    dispatch_async(barrierQueue, ^{
-        NSLog(@"blk0_for_reading");
-    });
-    dispatch_async(barrierQueue, ^{
-        NSLog(@"blk1_for_reading");
-    });
-    dispatch_async(barrierQueue, ^{
-        NSLog(@"blk2_for_reading");
-    });
-    dispatch_async(barrierQueue, ^{
-        NSLog(@"blk3_for_reading");
-    });
+dispatch_async(barrierQueue, ^{
+    NSLog(@"blk0_for_reading");
+});
+dispatch_async(barrierQueue, ^{
+    NSLog(@"blk1_for_reading");
+});
+dispatch_async(barrierQueue, ^{
+    NSLog(@"blk2_for_reading");
+});
+dispatch_async(barrierQueue, ^{
+    NSLog(@"blk3_for_reading");
+});
     
-    dispatch_barrier_async(barrierQueue, ^{
-        NSLog(@"blk_for_writing");
-    });
+dispatch_barrier_async(barrierQueue, ^{
+    NSLog(@"blk_for_writing");
+});
     
-    dispatch_async(barrierQueue, ^{
-        NSLog(@"blk4_for_reading");
-    });
-    dispatch_async(barrierQueue, ^{
-        NSLog(@"blk5_for_reading");
-    });
-    dispatch_async(barrierQueue, ^{
-        NSLog(@"blk6_for_reading");
-    });
-    dispatch_async(barrierQueue, ^{
-        NSLog(@"blk7_for_reading");
-    });
+dispatch_async(barrierQueue, ^{
+    NSLog(@"blk4_for_reading");
+});
+dispatch_async(barrierQueue, ^{
+    NSLog(@"blk5_for_reading");
+});
+dispatch_async(barrierQueue, ^{
+    NSLog(@"blk6_for_reading");
+});
+dispatch_async(barrierQueue, ^{
+    NSLog(@"blk7_for_reading");
+});
 ```
 
 运行结果:前4个读操作顺序不定，后4个读操作顺序不定，但是写操作必在前4个读操作之后，后4个读操作之前进行。   
@@ -142,11 +144,11 @@ dispatch_queue_t barrierQueue = dispatch_queue_create("com.objcTest.gcd.forBarri
 将指定的block同步追加到指定的Dispatch Queue中，在追加的Block结束之前，dispatch\_sync函数会一直等待（简易版的dispatch\_group\_wait），dispatch\_sync容易引起死锁:  
 
 ``` objc
-    //使用dispatch_sync引起死锁的例子
-    dispatch_queue_t mainQueue = dispatch_get_main_queue();
-    dispatch_sync(mainQueue, ^{
-        NSLog(@"hello");
-    });
+//使用dispatch_sync引起死锁的例子
+dispatch_queue_t mainQueue = dispatch_get_main_queue();
+dispatch_sync(mainQueue, ^{
+    NSLog(@"hello");
+});
 ```
 原因:dispatch\_sync函数在主线程中执行，block也被追加到主线程中，block在等待dispatch\_sync函数执行完成，dispatch\_sync在等待block执行完成，引起死锁   
 同样的，Serial Dispatch Queue也会引起同样的问题
