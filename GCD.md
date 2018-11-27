@@ -212,4 +212,91 @@ dispatch_resume函数恢复指定的Dispatch Queue。
 
 ## Dispatch Semaphore
 
+> 不考虑顺序，将所有数据追加到NSMutableArray中
+
+``` objc
+dispatch_queue_t queue= dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+NSMutableArray *array = [[NSMutableArray alloc] init];
+    
+for (int index = 1; index<100000;index++) {
+    dispatch_async(queue, ^{
+        [array addObject:[NSNumber numberWithInt:index]];
+    });
+}
+```
+编译通过，运行出错: `malloc: *** error for object 0x600003392480: pointer being freed was not allocated`
+大量的开辟内存导致内存出错。   
+Dispatch Semaphore原理与信号量类似。  
+一般用法:
+
+``` objc
+//计数值初始化为1
+dispatch_semaphore_t semaphore = dispatch_semaphore_create(1);
+//永久等待Dispatch Semaphore计数值大于等于1
+dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+//在一定时间内等待
+dispatch_time_t time = dispatch_time(DISPATCH_TIME_NOW, 1ull * NSEC_PER_SEC);
+long result = dispatch_semaphore_wait(semaphore, time);
+if (result) {
+    //Dispatch Semaphore的计数值为0，在到达指定时间为止待机
+} else {
+    //Dispatch Semaphore计数值大于等于1或者在待机中的指定时间内计数值大于等于1，Dispatch Semaphore计数值减一
+    //可执行需要进行排他控制的处理
+    
+}
+```
+
+用于本题:   
+
+``` objc
+dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+//生成Dispatch Semaphore,计数初始值设置为1,保证可访问NSMutableArray类对象的线程同时只能有一个
+dispatch_semaphore_t semaphore = dispatch_semaphore_create(1);
+NSMutableArray *array = [[NSMutableArray alloc] init];
+for (int index = 0;index<100000;index++) {
+    dispatch_async(queue, ^{
+        //持续等待Dispatch Semaphore计数值大于等于1
+        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+        //由于Dispatch Semaphore的计数值大于等于1，所以将计数值i减去1，dispatch_semaphore_wait函数返回
+        //因此执行到此处时Dispatch Semaphore必为0
+        //由于可访问NSMutableArray的线程只有一个，因此可以安全更新
+        [array addObject:[NSNumber numberWithInt:index]];
+        //排他控制处理结束，所以通过dispatch_semaphore_signal将计数值+1
+        //如果有通过dispatch_semaphore_wait函数等待Dispatch Semaphore的计数增加的线程，就由最先等待的线程执行
+        dispatch_semaphore_signal(semaphore);
+    });
+}
+```
+> 在没有Serial Dispatch Queue和dispatch_barrier_async函数那么大粒度且一部分处理需要进行排他控制的情况下，Dispatch Semaphore便可发挥威力
+
+## dispatch\_once
+
+dispatch\_once函数是保证在应用程序执行中只执行一次指定处理的API。下面这种经常出现的用来进行初始化的源代码可通过dispatch_once函数简化.
+
+``` objc
+static int initialized = NO;
+if (initialized == NO) {
+	//初始化
+	initialized = YES;
+}
+```
+如果使用dispatch_once函数，则源代码写为:
+
+``` objc
+static dispatch_once_t pred;
+dispatch_once(&pred, ^{
+	//初始化
+});
+```
+源代码看起来没有太大变化。但是通过dispatch_once函数，该源代码即使在多线程环境下执行，也可保证百分之百安全。   
+之前的源代码在大多数情况下也是安全的。但是在多核CPU中，在正在更新表示是否初始化的标志变量时读取，就有可能多次执行初始化处理。而用dispatch_once函数初始化就不必担心这样的问题。这就是所说的单例模式，在生成单例对象时使用。
+
+
+
+
+
+
+
+
+
 
